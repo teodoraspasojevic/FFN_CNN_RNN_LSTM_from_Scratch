@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class Checker():
+class Checker:
     def __init__(self, resolution, tile_size):
         self.resolution = resolution
         self.tile_size = tile_size
@@ -28,7 +28,7 @@ class Checker():
         plt.show()
 
 
-class Circle():
+class Circle:
     def __init__(self, resolution, radius, position):
         self.resolution = resolution
         self.radius = radius
@@ -54,7 +54,7 @@ class Circle():
         plt.show()
 
 
-class Spectrum():
+class Spectrum:
     def __init__(self, resolution):
         self.resolution = resolution
         self.output = None
