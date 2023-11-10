@@ -11,15 +11,6 @@ import matplotlib.pyplot as plt
 
 class ImageGenerator:
     def __init__(self, file_path, label_path, batch_size, image_size, rotation=False, mirroring=False, shuffle=False):
-        # Define all members of your generator class object as global members here.
-        # These need to include:
-        # the batch size
-        # the image size
-        # flags for different augmentations and whether the data should be shuffled for each epoch
-        # Also depending on the size of your data-set you can consider loading all images into memory here already.
-        # The labels are stored in json format and can be directly loaded as dictionary.
-        # Note that the file names correspond to the dicts of the label dictionary.
-
         self.class_dict = {0: 'airplane', 1: 'automobile', 2: 'bird', 3: 'cat', 4: 'deer', 5: 'dog', 6: 'frog',
                            7: 'horse', 8: 'ship', 9: 'truck'}
         self.file_path = file_path
@@ -47,25 +38,34 @@ class ImageGenerator:
         return np.array(data)
 
     def load_images(self, start, end):
-        # YOU ARE DOING RESIZING HERE!!!
-        images = [scipy.misc.imresize(np.load(image_path), self.image_size[0:2]) for image_path in self.image_paths[start:end]]
+        # resizing is done here
+        images = []
+        for image_path in self.image_paths[start:end]:
+            image = np.load(image_path)
+            image = scipy.misc.imresize(image, self.image_size[0:2])
+            image = self.augment(image)
+            images.append(image)
         return np.array(images)
 
-    def next(self):
-        # This function creates a batch of images and corresponding labels and returns them.
-        # In this context a "batch" of images just means a bunch, say 10 images that are forwarded at once.
-        # Note that your amount of total data might not be divisible without remainder with the batch_size.
-        # Think about how to handle such cases
+    def shuffle_data(self):
+        keys = list(self.labels)
+        np.random.shuffle(keys)
+        self.labels = {key: self.labels[key] for key in keys}
 
+    def next(self):
         start = self.index
         end = min(self.index + self.batch_size, len(self.labels))
+
+        if start == 0:
+            self.epoch += 1
+            self.shuffle_data()
 
         images = self.load_images(start, end)
         labels = np.array([self.labels[str(index)] for index in range(start, end)])
 
         if (self.index + self.batch_size) > len(self.labels):
-            # TODO: call shuffle
             self.epoch += 1
+            self.shuffle_data()
             start = 0
             end = self.index + self.batch_size - len(self.labels)
             images = np.append(images, self.load_images(start, end), axis=0)
@@ -75,23 +75,42 @@ class ImageGenerator:
 
         return images, labels
 
-    def augment(self,img):
-        # this function takes a single image as an input and performs a random transformation
-        # (mirroring and/or rotation) on it and outputs the transformed image
-        #TODO: implement augmentation function
+    def augment(self, image):
+        if self.mirroring:
+            flipping_methods = ['none', 'horizontal', 'vertical', 'both']
+            chosen_method = np.random.choice(flipping_methods)
+            if chosen_method == 'horizontal':
+                image = np.fliplr(image)
+            elif chosen_method == 'vertical':
+                image = np.flipud(image)
+            elif chosen_method == 'both':
+                image = np.flip(image, (0, 1))
+            elif chosen_method == 'none':
+                pass
+        if self.rotation:
+            rotation_number = np.random.randint(0, 4)
+            image = np.rot90(image, rotation_number)
 
-        return img
+        return image
 
     def current_epoch(self):
         return self.epoch
 
     def class_name(self, x):
-        # This function returns the class name for a specific input
-        #TODO: implement class name function
-        return
-    def show(self):
-        # In order to verify that the generator creates batches as required, this functions calls next to get a
-        # batch of images and labels and visualizes it.
-        #TODO: implement show method
-        pass
+        return self.class_dict[x]
 
+    def show(self):
+        images, labels = self.next()
+        image_number = len(images)
+        row_number = np.ceil(np.sqrt(image_number))
+        col_number = image_number // row_number
+        plt.figure()
+        count = 0
+        for i in range(row_number):
+            for j in range(col_number):
+                plt.subplot(i, j, count)
+                plt.imshow(images[count])
+                title = self.class_name(labels[count])
+                plt.title(title)
+                count += 1
+        plt.show()
