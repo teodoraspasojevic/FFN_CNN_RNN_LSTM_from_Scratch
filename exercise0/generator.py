@@ -1,12 +1,8 @@
 import os.path
 import json
-import scipy.misc
 import numpy as np
 import matplotlib.pyplot as plt
-
-# In this exercise task you will implement an image generator. Generator objects in python are defined as having a next function.
-# This next function returns the next generated object. In our case it returns the input of a neural network each time it gets called.
-# This input consists of a batch of images and its corresponding labels.
+from PIL import Image
 
 
 class ImageGenerator:
@@ -22,12 +18,12 @@ class ImageGenerator:
         self.shuffle = shuffle
         self.labels = self.load_labels()
         self.image_paths = self.load_image_paths()
-        self.epoch = 0
+        self.epoch = -1
         self.index = 0
 
     def load_labels(self):
-        with open(self.file_path, 'r') as json_file:
-            labels = json.load(json_file)
+        with open(self.label_path, 'r') as f:
+            labels = json.load(f)
         return labels
 
     def load_image_paths(self):
@@ -38,19 +34,22 @@ class ImageGenerator:
         return np.array(data)
 
     def load_images(self, start, end):
-        # resizing is done here
+        # Resizing is done here
         images = []
         for image_path in self.image_paths[start:end]:
             image = np.load(image_path)
-            image = scipy.misc.imresize(image, self.image_size[0:2])
+            image = np.array(Image.fromarray(image).resize((self.image_size[0], self.image_size[1])))
             image = self.augment(image)
             images.append(image)
         return np.array(images)
 
     def shuffle_data(self):
-        keys = list(self.labels)
-        np.random.shuffle(keys)
-        self.labels = {key: self.labels[key] for key in keys}
+        if self.shuffle:
+            keys = list(self.labels.keys())
+            np.random.shuffle(keys)
+            shuffled_labels = {key: self.labels[key] for key in keys}
+            self.labels = shuffled_labels
+            self.image_paths = self.load_image_paths()
 
     def next(self):
         start = self.index
@@ -61,7 +60,8 @@ class ImageGenerator:
             self.shuffle_data()
 
         images = self.load_images(start, end)
-        labels = np.array([self.labels[str(index)] for index in range(start, end)])
+        values = list(self.labels.values())
+        labels = np.array(values[start:end])
 
         if (self.index + self.batch_size) > len(self.labels):
             self.epoch += 1
@@ -69,7 +69,8 @@ class ImageGenerator:
             start = 0
             end = self.index + self.batch_size - len(self.labels)
             images = np.append(images, self.load_images(start, end), axis=0)
-            labels = np.append(labels, np.array([self.labels[str(index)] for index in range(start, end)]), axis=0)
+            values = list(self.labels.values())
+            labels = np.append(labels, np.array(values[start:end]), axis=0)
 
         self.index = (self.index + self.batch_size) % len(self.labels)
 
