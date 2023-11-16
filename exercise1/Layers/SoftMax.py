@@ -18,6 +18,6 @@ class SoftMax(BaseLayer):
 
     def backward(self, error_tensor):
         # TODO: check this function
-        jacobian_matrix = np.dot(self.output_tensor, (np.eye(self.output_tensor.shape[1]) - self.output_tensor.transpose()))
-        previous_error_tensor = np.dot(error_tensor, jacobian_matrix)
+        inner_sum = np.sum(error_tensor * self.output_tensor, axis=1, keepdims=True)
+        previous_error_tensor = self.output_tensor * (error_tensor - inner_sum)
         return previous_error_tensor

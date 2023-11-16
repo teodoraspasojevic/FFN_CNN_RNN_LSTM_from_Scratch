@@ -1,22 +1,27 @@
 import copy
 
+import numpy as np
+
 
 class NeuralNetwork:
-    def __init__(self, optimizer, loss: list, layers: list, data_layer, loss_layer):
+    def __init__(self, optimizer):
         self.optimizer = optimizer
-        self.loss = loss
-        self.layers = layers
-        self.data_layer = data_layer
-        self.loss_layer = loss_layer
+        self.loss = []
+        self.layers = []
+        self.data_layer = None
+        self.loss_layer = None
         self.label_tensor = None
 
     def forward(self):
         input_tensor, label_tensor = self.data_layer.next()
         self.label_tensor = label_tensor
-        for i in range(len(self.layers) - 1):
+        for i in range(len(self.layers)):
             input_tensor = self.layers[i].forward(input_tensor)
-        loss = self.layers[-1].forward(input_tensor, label_tensor)
-        return loss
+        # loss = self.layers[-1].forward(input_tensor, label_tensor)
+        output_tensor = input_tensor
+        predicted_class = np.argmax(output_tensor)
+        return predicted_class
+        # TODO: check if this should be the output
 
     def backward(self):
         error_tensor = self.layers[-1].backward(self.label_tensor)
@@ -27,7 +32,7 @@ class NeuralNetwork:
     def append_layer(self, layer):
         if layer.trainable:
             optimizer_copy = copy.deepcopy(self.optimizer)
-            layer.optimizer(optimizer_copy)
+            layer.optimizer = optimizer_copy
         self.layers.append(layer)
 
     def train(self, iterations):
