@@ -10,10 +10,8 @@ class CrossEntropyLoss:
         self.prediction_tensor = prediction_tensor
         eps = np.finfo(float).eps
 
-        labels_indexes = np.argmax(label_tensor, axis=1)
-        selected_probs = prediction_tensor[np.arange(prediction_tensor.shape[0]), labels_indexes]
-
-        loss = -np.sum(np.log(selected_probs + eps))
+        neg_log_probs = -np.log(prediction_tensor + eps)
+        loss = np.sum(neg_log_probs * label_tensor)
         self.loss = loss
         # TODO: check if you need to return loss
         return loss

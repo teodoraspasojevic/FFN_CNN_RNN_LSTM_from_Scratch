@@ -1,7 +1,5 @@
 import copy
 
-import numpy as np
-
 
 class NeuralNetwork:
     def __init__(self, optimizer):
@@ -17,15 +15,15 @@ class NeuralNetwork:
         self.label_tensor = label_tensor
         for i in range(len(self.layers)):
             input_tensor = self.layers[i].forward(input_tensor)
-        # loss = self.layers[-1].forward(input_tensor, label_tensor)
         output_tensor = input_tensor
-        predicted_class = np.argmax(output_tensor)
-        return predicted_class
+        # predicted_class = np.argmax(output_tensor)
+        loss = self.loss_layer.forward(output_tensor, self.label_tensor)
+        return loss
         # TODO: check if this should be the output
 
     def backward(self):
-        error_tensor = self.layers[-1].backward(self.label_tensor)
-        for i in range(len(self.layers)-2, -1):
+        error_tensor = self.loss_layer.backward(self.label_tensor)
+        for i in range(len(self.layers)-1, -1, -1):
             error_tensor = self.layers[i].backward(error_tensor)
         return error_tensor
 
@@ -42,7 +40,7 @@ class NeuralNetwork:
             self.backward()
 
     def test(self, input_tensor):
-        for i in range(len(self.layers) - 1):
+        for i in range(len(self.layers)):
             input_tensor = self.layers[i].forward(input_tensor)
-        probabilities = input_tensor
-        return probabilities
+        output_tensor = input_tensor
+        return output_tensor

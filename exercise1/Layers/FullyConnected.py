@@ -31,7 +31,8 @@ class FullyConnected(BaseLayer):
         return output_tensor
 
     def backward(self, error_tensor):
-        previous_error_tensor = np.dot(error_tensor, self.weights[0:-1, :].transpose())
+        previous_error_tensor = np.dot(error_tensor, self.weights.transpose())
+        previous_error_tensor = previous_error_tensor[:, :-1]
         gradient_tensor = np.dot(self.input_tensor.transpose(), error_tensor)
         self.gradient_tensor = gradient_tensor
         if self.optimizer:
