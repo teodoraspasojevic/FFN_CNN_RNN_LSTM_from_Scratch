@@ -46,9 +46,14 @@ class Adam:
         self.rho = rho
         self.momentum = 0
         self.second_momentum = 0
+        self.iteration = 0
 
     def calculate_update(self, weight_tensor, gradient_tensor):
+        self.iteration += 1
+        eps = np.finfo(float).eps
         self.momentum = self.mu * self.momentum + (1 - self.mu) * gradient_tensor
+        momentum_corrected = self.momentum / (1 - self.mu ** self.iteration)
         self.second_momentum = self.rho * self.second_momentum + (1 - self.rho) * gradient_tensor * gradient_tensor
-        updated_weight_tensor = weight_tensor - self.learning_rate * self.momentum / (np.sqrt(self.second_momentum) + np.finfo.eps)
+        second_momentum_corrected = self.second_momentum / (1 - self.rho ** self.iteration)
+        updated_weight_tensor = weight_tensor - self.learning_rate * momentum_corrected / (np.sqrt(second_momentum_corrected) + eps)
         return updated_weight_tensor
