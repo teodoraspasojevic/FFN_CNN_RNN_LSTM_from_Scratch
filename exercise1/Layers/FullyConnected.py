@@ -20,7 +20,7 @@ class FullyConnected(BaseLayer):
         self.input_tensor = None
         self.gradient_tensor = None
         # We randomly initialize weights tensor and add place for bias in the weight tensor.
-        self.weights = np.random.uniform(0, 1, size=(input_size + 1, output_size))
+        self.weights = None
 
     @property
     def optimizer(self):
@@ -97,3 +97,8 @@ class FullyConnected(BaseLayer):
             self.weights = updated_weight_tensor
 
         return previous_error_tensor
+
+    def initialize(self, weights_initializer, bias_initializer):
+        weights = weights_initializer.initialize()
+        biases = bias_initializer.initialize()
+        self.weights = np.vstack(weights, biases)
