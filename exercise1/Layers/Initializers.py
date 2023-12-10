@@ -6,7 +6,7 @@ class Constant:
         self.initialization_value = initialization_value
 
     def initialize(self, weights_shape, fan_in, fan_out):
-        weights = np.ones_like(weights_shape) * self.initialization_value
+        weights = np.full(weights_shape, self.initialization_value)
         return weights
 
 

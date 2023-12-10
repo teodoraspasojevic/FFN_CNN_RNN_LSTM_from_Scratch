@@ -66,7 +66,7 @@ class NeuralNetwork:
         Adding new layer to the neural network.
 
         Args:
-        later(BaseLayer): New layer to append.
+       later(BaseLayer): New layer to append.
 
         Returns:
             None
