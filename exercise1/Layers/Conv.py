@@ -8,7 +8,7 @@ import copy
 class Conv(BaseLayer):
     def __init__(self, stride_shape, convolution_shape, num_kernels):
         super().__init__()
-        self.stride_shape = stride_shape
+        self.stride = stride_shape
         self.convolution_shape = convolution_shape
         self.num_kernels = num_kernels
         self.trainable = True
@@ -44,25 +44,43 @@ class Conv(BaseLayer):
         self.weights = weight_initializer.initialize(self.weights.shape, fan_in, fan_out)
         self.bias = bias_initializer.initialize(self.bias.shape, self.convolution_shape[0], self.num_kernels)
 
-    def forward(self, input_tensor):
-        self.input_tensor = input_tensor
+    def preprocess(self, error_tensor=None, mode=0):
+        # if mode = 0 -> forward
+        # if mode = 1 -> backward
 
-        if len(input_tensor.shape) == 3:
-            input_tensor = np.expand_dims(input_tensor, axis=3)
+        if len(self.input_tensor.shape) == 3:
+            input_tensor = np.expand_dims(self.input_tensor, axis=3)
             expanded = True
         else:
+            input_tensor = self.input_tensor
             expanded = False
-        b, c, y, x = input_tensor.shape
 
-        if len(self.stride_shape) == 1:
-            stride_shape = self.stride_shape * 2
+        if len(self.stride) == 1:
+            stride = self.stride * 2
         else:
-            stride_shape = self.stride_shape
+            stride = self.stride
+
+        if len(self.convolution_shape) == 2:
+            convolution_shape = self.convolution_shape + (1, )
+        else:
+            convolution_shape = self.convolution_shape
 
         if self.weights.ndim == 3:
             weights = np.expand_dims(self.weights, axis=-1)
         else:
             weights = self.weights
+
+        if mode == 1:
+            if len(error_tensor.shape) == 3:
+                error_tensor = np.expand_dims(error_tensor, axis=3)
+
+        return input_tensor, stride, convolution_shape, weights, error_tensor, expanded
+
+    def forward(self, input_tensor):
+        self.input_tensor = input_tensor
+
+        input_tensor, stride, _, weights, _, expanded = self.preprocess(0)
+        b, c, y, x = input_tensor.shape
 
         output_tensor = np.zeros([b, self.num_kernels, y, x])
 
@@ -71,7 +89,7 @@ class Conv(BaseLayer):
                 for channel in range(c):
                     output_tensor[i, k, :, :] += correlate(input_tensor[i, channel, :, :], weights[k, channel, :, :], mode="same", method="direct")
                 output_tensor[i, k, :, :] += self.bias[k]
-        output_tensor = output_tensor[:, :, ::stride_shape[0], ::stride_shape[1]]
+        output_tensor = output_tensor[:, :, ::stride[0], ::stride[1]]
 
         if expanded:
             output_tensor = np.squeeze(output_tensor, axis=-1)
@@ -79,21 +97,44 @@ class Conv(BaseLayer):
         return output_tensor
 
     def upsample_tensor(self, error_tensor, input_tensor):
+        stride = self.stride
+        if len(self.stride) == 1:
+            stride = self.stride * 2
         _, _, height, width = input_tensor.shape
         batch_size, channels, reduced_height, reduced_width = error_tensor.shape
 
-        scale_factor_y = height / reduced_height
-        scale_factor_x = width / reduced_width
+        scale_factor_y = stride[0]
+        scale_factor_x = stride[1]
 
         error_tensor_upsampled = np.zeros(shape=(batch_size, channels, height, width))
 
-        # Upsample each batch and channel independently
+        # Fill the upscaled tensor with the original error values at the correct positions
         for b in range(batch_size):
             for c in range(channels):
-                error_tensor_upsampled[b, c, :, :] = zoom(error_tensor[b, c, :, :], (scale_factor_y, scale_factor_x),
-                                                          order=1)  # bilinear interpolation
+                for y in range(reduced_height):
+                    for x in range(reduced_width):
+                        new_y = y * scale_factor_y
+                        new_x = x * scale_factor_x
+                        error_tensor_upsampled[b, c, new_y, new_x] = error_tensor[b, c, y, x]
 
         return error_tensor_upsampled
+
+    # def upsample_tensor(self, error_tensor, input_tensor):
+    #     _, _, height, width = input_tensor.shape
+    #     batch_size, channels, reduced_height, reduced_width = error_tensor.shape
+    #
+    #     scale_factor_y = height / reduced_height
+    #     scale_factor_x = width / reduced_width
+    #
+    #     error_tensor_upsampled = np.zeros(shape=(batch_size, channels, height, width))
+    #
+    #     # Upsample each batch and channel independently
+    #     for b in range(batch_size):
+    #         for c in range(channels):
+    #             error_tensor_upsampled[b, c, :, :] = zoom(error_tensor[b, c, :, :], (scale_factor_y, scale_factor_x),
+    #                                                       order=1)  # bilinear interpolation
+    #
+    #     return error_tensor_upsampled
 
     def calculate_gradients(self, error_tensor, input_tensor, convolution_shape, weights):
 
@@ -126,40 +167,11 @@ class Conv(BaseLayer):
                 for channel in range(flipped_weights.shape[1]):
                     previous_error_tensor[b, k, :, :] += convolve(error_tensor[b, channel, :, :], flipped_weights[k, channel, :, :], mode='same')
 
-        #TODO: see if we should squeeze something
-
         return previous_error_tensor
 
     def backward(self, error_tensor):
-        if len(self.input_tensor.shape) == 3:
-            input_tensor = np.expand_dims(self.input_tensor, axis=3)
-            expanded = True
-        else:
-            input_tensor = self.input_tensor
-            expanded = False
-        b, c, y, x = input_tensor.shape
 
-        if len(error_tensor.shape) == 3:
-            error_tensor = np.expand_dims(error_tensor, axis=3)
-            expanded = True
-        else:
-            expanded = False
-        b, c, y, x = error_tensor.shape
-
-        if len(self.stride_shape) == 1:
-            stride_shape = self.stride_shape * 2
-        else:
-            stride_shape = self.stride_shape
-
-        if len(self.convolution_shape) == 2:
-            convolution_shape = self.convolution_shape + (1, )
-        else:
-            convolution_shape = self.convolution_shape
-
-        if self.weights.ndim == 3:
-            weights = np.expand_dims(self.weights, axis=-1)
-        else:
-            weights = self.weights
+        input_tensor, _, convolution_shape, weights, error_tensor, expanded = self.preprocess(error_tensor, 1)
 
         # Calculate the gradient
         weights_gradient_tensor, bias_gradient_tensor = self.calculate_gradients(error_tensor, input_tensor, convolution_shape, weights)
