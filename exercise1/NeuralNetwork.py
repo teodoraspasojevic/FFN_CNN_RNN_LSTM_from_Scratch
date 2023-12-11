@@ -75,8 +75,8 @@ class NeuralNetwork:
         if layer.trainable:
             optimizer_copy = copy.deepcopy(self.optimizer)
             layer.optimizer = optimizer_copy
-        if self.weights_initializer and self.bias_initializer:
-            layer.initialize(self.weights_initializer, self.bias_initializer)
+            if self.weights_initializer and self.bias_initializer:
+                layer.initialize(self.weights_initializer, self.bias_initializer)
 
         self.layers.append(layer)
 
