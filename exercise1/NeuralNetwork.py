@@ -13,7 +13,7 @@ class NeuralNetwork:
         loss_layer(CrossEntropyLoss): Layer for calculating the loss.
         label_tensor(np.ndarray): Tensor with true labels.
     """
-    def __init__(self, optimizer, weights_initializer, bias_initializer):
+    def __init__(self, optimizer, weights_initializer=None, bias_initializer=None):
         self.optimizer = optimizer
         self.weights_initializer = weights_initializer
         self.bias_initializer = bias_initializer
@@ -75,6 +75,7 @@ class NeuralNetwork:
         if layer.trainable:
             optimizer_copy = copy.deepcopy(self.optimizer)
             layer.optimizer = optimizer_copy
+        if self.weights_initializer and self.bias_initializer:
             layer.initialize(self.weights_initializer, self.bias_initializer)
 
         self.layers.append(layer)

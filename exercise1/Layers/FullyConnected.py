@@ -99,6 +99,8 @@ class FullyConnected(BaseLayer):
         return previous_error_tensor
 
     def initialize(self, weights_initializer, bias_initializer):
-        weights = weights_initializer.initialize()
-        biases = bias_initializer.initialize()
-        self.weights = np.vstack(weights, biases)
+        input_size, output_size = self.weights.shape
+        input_size -= 1  # because of the bias added in the weights tensor
+        weights = weights_initializer.initialize((input_size, output_size), input_size, output_size)
+        biases = bias_initializer.initialize((1, output_size), 1, output_size)
+        self.weights = np.vstack((weights, biases))
