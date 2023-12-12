@@ -1151,8 +1151,7 @@ if __name__ == "__main__":
         # sys.argv.pop()
         loader = unittest.TestLoader()
         bonus_points = {}
-        tests = [TestOptimizers2, TestInitializers, TestFlatten, TestConv, TestPooling, TestFullyConnected2,
-                 TestNeuralNetwork2]
+        tests = [TestOptimizers2, TestInitializers, TestFlatten, TestConv, TestPooling, TestFullyConnected2, TestNeuralNetwork2]
         percentages = [8, 5, 2, 45, 15, 2, 23]
         total_points = 0
         for t, p in zip(tests, percentages):
