@@ -7,6 +7,9 @@ class Flatten(BaseLayer):
         self.input_shape = None
 
     def forward(self, input_tensor):
+        if input_tensor.ndim == 2:
+            self.input_shape = input_tensor.shape
+            return input_tensor
         b, w, h, c = input_tensor.shape
         self.input_shape = input_tensor.shape
         input_tensor_reshaped = input_tensor.reshape(b, w * h * c)
