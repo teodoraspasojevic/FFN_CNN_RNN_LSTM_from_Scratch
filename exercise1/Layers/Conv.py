@@ -150,7 +150,7 @@ class Conv(BaseLayer):
         for i in range(error_tensor.shape[1]):
             for j in range(input_tensor.shape[1]):
                 for b in range(input_tensor.shape[0]):
-                    weights_gradient_tensor[i, j, :, :] += convolve(padded_input_tensor[b, j, :, :], error_tensor[b, i, :, :], mode='valid')
+                    weights_gradient_tensor[i, j, :, :] += correlate(padded_input_tensor[b, j, :, :], error_tensor[b, i, :, :], mode='valid')
             bias_gradient_tensor[i] = np.sum(error_tensor[:, i, :, :])
 
         # error_spatial_sum = np.sum(error_tensor, axis=(2, 3))
