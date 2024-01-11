@@ -23,6 +23,17 @@ class NeuralNetwork:
         self.loss_layer = None
         self.label_tensor = None
 
+    @property
+    def phase(self):
+        return self.layers[0].testing_phase
+
+    # TODO: add maybe getter and setter for testing_phase in Base.py
+
+    @phase.setter
+    def phase(self, phase):
+        for layer in self.layers:
+            layer.testing_phase = phase
+
     def forward(self):
         """
         Passes input data forward through all the layers of our neural network.
@@ -57,6 +68,10 @@ class NeuralNetwork:
 
         # We go backward through all the layers and propagate the error.
         for i in range(len(self.layers)-1, -1, -1):
+            # If we have regularizer, we add regularization loss to the data loss.
+            if self.layers[i].optimizer:
+                if self.layers[i].optimizer.regulizer:
+                    error_tensor += self.layers[i].optimizer.regulizer.norm(self.layers[i].weights)
             error_tensor = self.layers[i].backward(error_tensor)
 
         return error_tensor
@@ -90,6 +105,7 @@ class NeuralNetwork:
         Returns:
             None
         """
+        self.phase(False)
         # We save the loss calculated in each iteration.
         for i in range(iterations):
             loss = self.forward()
@@ -106,6 +122,7 @@ class NeuralNetwork:
         Returns:
             np.ndarray: Tensor with predicted probabilities.
         """
+        self.phase(True)
         # We propagate the input tensor through all the layers.
         for i in range(len(self.layers)):
             input_tensor = self.layers[i].forward(input_tensor)
