@@ -32,7 +32,7 @@ class Sgd(Optimizer):
             np.ndarray: Tensor with updated weight for the layer.
         """
         if self.regularizer:
-            gradient_tensor += self.regularizer.calculate_gradient(weight_tensor)
+            weight_tensor -= self.regularizer.calculate_gradient(weight_tensor) * self.learning_rate
         updated_weight_tensor = weight_tensor - self.learning_rate * gradient_tensor
 
         return updated_weight_tensor
