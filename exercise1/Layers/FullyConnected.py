@@ -55,6 +55,19 @@ class FullyConnected(BaseLayer):
         """
         return self.gradient_tensor
 
+    # @property
+    # def weights(self):
+    #     return self.weights
+    #
+    # @weights.setter
+    # def weights(self, weights):
+    #     self.weights = weights
+
+    def optimize(self, gradient_tensor):
+        if self.optimizer:
+            updated_weight_tensor = self.optimizer.calculate_update(self.weights, gradient_tensor)
+            self.weights = updated_weight_tensor
+
     def forward(self, input_tensor):
         """
         Calculates the output of the layer in the forward pass, by multiplying input tensor and weights of the layer.
@@ -92,9 +105,7 @@ class FullyConnected(BaseLayer):
         self.gradient_tensor = gradient_tensor
 
         # If we have the optimizer, we update the weights.
-        if self.optimizer:
-            updated_weight_tensor = self.optimizer.calculate_update(self.weights, gradient_tensor)
-            self.weights = updated_weight_tensor
+        self.optimize(gradient_tensor)
 
         return previous_error_tensor
 
