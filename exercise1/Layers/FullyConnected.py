@@ -10,7 +10,7 @@ class FullyConnected(BaseLayer):
         trainable(bool): Flag implying if the layer will be trained.
         _optimizer(Sgd): Optimizer for weights tensor updating. It is a protected member of the class.
         input_tensor(np.ndarray): Tensor with features of the whole batch. Its size is batch_size * (input_size + 1).
-        gradient_tensor(np.ndarray): Tensor with calculated gradient of the layer.
+        gradient_weights(np.ndarray): Tensor with calculated gradient of the layer.
         weights(np.ndarray): Tensor of weights for this layer.
     """
     def __init__(self, input_size, output_size):
@@ -18,9 +18,17 @@ class FullyConnected(BaseLayer):
         self.trainable = True
         self._optimizer = None
         self.input_tensor = None
-        self.gradient_tensor = None
+        self._gradient_weights = None
         # We randomly initialize weights tensor and add place for bias in the weight tensor.
-        self.weights = np.random.uniform(0, 1, size=(input_size + 1, output_size))
+        self._weights = np.random.uniform(0, 1, size=(input_size + 1, output_size))
+
+    @property
+    def weights(self):
+        return self._weights
+
+    @weights.setter
+    def weights(self, weights):
+        self._weights = weights
 
     @property
     def optimizer(self):
@@ -53,7 +61,11 @@ class FullyConnected(BaseLayer):
         Returns:
             np.ndarray: Tensor with calculated gradient of the layer.
         """
-        return self.gradient_tensor
+        return self._gradient_weights
+
+    @gradient_weights.setter
+    def gradient_weights(self, gradient_weights):
+        self._gradient_weights = gradient_weights
 
     # @property
     # def weights(self):
@@ -63,9 +75,16 @@ class FullyConnected(BaseLayer):
     # def weights(self, weights):
     #     self.weights = weights
 
-    def optimize(self, gradient_tensor):
+    def initialize(self, weights_initializer, bias_initializer):
+        input_size, output_size = self.weights.shape
+        input_size -= 1  # because of the bias added in the weights tensor
+        weights = weights_initializer.initialize((input_size, output_size), input_size, output_size)
+        biases = bias_initializer.initialize((1, output_size), 1, output_size)
+        self.weights = np.vstack((weights, biases))
+
+    def optimize(self, gradient_weights):
         if self.optimizer:
-            updated_weight_tensor = self.optimizer.calculate_update(self.weights, gradient_tensor)
+            updated_weight_tensor = self.optimizer.calculate_update(self.weights, gradient_weights)
             self.weights = updated_weight_tensor
 
     def forward(self, input_tensor):
@@ -101,17 +120,10 @@ class FullyConnected(BaseLayer):
         previous_error_tensor = previous_error_tensor[:, :-1]
 
         # We calculate the gradient of the layer, multiplying input and error tensor. We remove added column for biases.
-        gradient_tensor = np.dot(self.input_tensor.transpose(), error_tensor)
-        self.gradient_tensor = gradient_tensor
+        gradient_weights = np.dot(self.input_tensor.transpose(), error_tensor)
+        self.gradient_weights = gradient_weights
 
         # If we have the optimizer, we update the weights.
-        self.optimize(gradient_tensor)
+        self.optimize(gradient_weights)
 
         return previous_error_tensor
-
-    def initialize(self, weights_initializer, bias_initializer):
-        input_size, output_size = self.weights.shape
-        input_size -= 1  # because of the bias added in the weights tensor
-        weights = weights_initializer.initialize((input_size, output_size), input_size, output_size)
-        biases = bias_initializer.initialize((1, output_size), 1, output_size)
-        self.weights = np.vstack((weights, biases))
