@@ -20,7 +20,8 @@ class FullyConnected(BaseLayer):
         self.input_tensor = None
         self._gradient_weights = None
         # We randomly initialize weights tensor and add place for bias in the weight tensor.
-        self._weights = np.random.uniform(0, 1, size=(input_size + 1, output_size))
+        #self._weights = np.random.uniform(0, 1, size=(input_size + 1, output_size))
+        self._weights = np.ones(shape=(input_size+1, output_size))
 
     @property
     def weights(self):
@@ -64,8 +65,8 @@ class FullyConnected(BaseLayer):
         return self._gradient_weights
 
     @gradient_weights.setter
-    def gradient_weights(self, gradient_weights):
-        self._gradient_weights = gradient_weights
+    def gradient_weights(self, gradient_weight):
+        self._gradient_weights = gradient_weight
 
     # @property
     # def weights(self):

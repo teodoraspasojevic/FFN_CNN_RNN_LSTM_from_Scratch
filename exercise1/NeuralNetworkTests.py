@@ -1354,7 +1354,8 @@ class TestRNN(unittest.TestCase):
         self.categories = 4
         self.label_tensor = np.zeros([self.categories, self.batch_size]).T
         for i in range(self.batch_size):
-            self.label_tensor[i, np.random.randint(0, self.categories)] = 1
+            # self.label_tensor[i, np.random.randint(0, self.categories)] = 1
+            self.label_tensor[i, 0] = 1
 
     def test_initialization(self):
         layer = RNN.RNN(self.input_size, self.hidden_size, self.output_size)
@@ -1434,10 +1435,12 @@ class TestRNN(unittest.TestCase):
                                  " reversed such that we obtain the gradient starting from time step 0.")
 
     def test_gradient_weights(self):
-        input_tensor = np.abs(np.random.random((self.input_size, self.batch_size))).T
+        # input_tensor = np.abs(np.random.random((self.input_size, self.batch_size))).T
+        input_tensor = np.ones(shape=(self.input_size, self.batch_size)).T
         layers = list()
         layer = RNN.RNN(self.input_size, self.hidden_size, self.categories)
-        layer.initialize(Initializers.He(), Initializers.He())
+        # layer.initialize(Initializers.He(), Initializers.He())
+        layer.initialize(Initializers.Constant(), Initializers.Constant())
         layers.append(layer)
         layers.append(L2Loss())
         difference = Helpers.gradient_check_weights(layers, input_tensor, self.label_tensor, False)

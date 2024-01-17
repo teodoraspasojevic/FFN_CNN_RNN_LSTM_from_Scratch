@@ -13,6 +13,7 @@ class RNN(BaseLayer):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
+        self.batch_size = 0
         self.hidden_state = np.zeros(shape=(1, self.hidden_size))
         self._memorize = False
         self._weights = np.random.uniform(0, 1, size=(self.hidden_size + self.input_size + 1, self.hidden_size))
@@ -43,7 +44,7 @@ class RNN(BaseLayer):
         return self._optimizer
 
     @optimizer.setter
-    def optimizer(self, optimizer):
+    def optimizer(self, optimizer_object):
         """
         Setter for attribute _optimizer.
 
@@ -53,31 +54,31 @@ class RNN(BaseLayer):
         Returns:
             None
         """
-        self._optimizer = optimizer
+        self._optimizer = optimizer_object
 
     @property
     def memorize(self):
         return self._memorize
 
     @memorize.setter
-    def memorize(self, memorize):
-        self._memorize = memorize
+    def memorize(self, flag):
+        self._memorize = flag
 
     @property
     def gradient_weights(self):
         return self._gradient_weights
 
     @gradient_weights.setter
-    def gradient_weights(self, gradient_weights):
-        self._gradient_weights = gradient_weights
+    def gradient_weights(self, gradient_weight):
+        self._gradient_weights = gradient_weight
 
     @property
     def weights(self):
         return self._weights
 
     @weights.setter
-    def weights(self, weights):
-        self._weights = weights
+    def weights(self, weight):
+        self._weights = weight
 
     def create_embedded_layers(self):
         self.fc_hidden = FullyConnected(self.hidden_size + self.input_size, self.hidden_size)
@@ -95,21 +96,25 @@ class RNN(BaseLayer):
         self.weights_output = weight_initializer.initialize(self.weights_output.shape, fan_in, fan_out)
         self.fc_output.weights = self.weights_output
 
+    def calculate_regularization_loss(self):
+        return self.optimizer.regularizer.norm(self.weights)
+
     def forward(self, input_tensor):
 
         self.input_tensor = input_tensor
+        self.batch_size = input_tensor.shape[0]
 
-        sigmoid_activations = np.zeros(shape=(self.input_tensor.shape[0], self.output_size))
-        tanh_activations = np.zeros(shape=(self.input_tensor.shape[0], self.hidden_size))
-        output_tensor = np.zeros(shape=(self.input_tensor.shape[0], self.output_size))
+        sigmoid_activations = np.zeros(shape=(self.batch_size, self.output_size))
+        tanh_activations = np.zeros(shape=(self.batch_size, self.hidden_size))
+        output_tensor = np.zeros(shape=(self.batch_size, self.output_size))
 
-        hidden_inputs = np.zeros(shape=(self.input_tensor.shape[0], self.input_size + self.hidden_size + 1))
-        output_inputs = np.zeros(shape=(self.input_tensor.shape[0], self.hidden_size + 1))
+        hidden_inputs = np.zeros(shape=(self.batch_size, self.input_size + self.hidden_size + 1))
+        output_inputs = np.zeros(shape=(self.batch_size, self.hidden_size + 1))
 
         if not self.memorize:
             self.hidden_state = np.zeros(shape=(1, self.hidden_size))
 
-        for i in range(self.input_tensor.shape[0]):
+        for i in range(self.batch_size):
 
             # Prepare input for the first pass.
             current_input_tensor = input_tensor[i, :]
