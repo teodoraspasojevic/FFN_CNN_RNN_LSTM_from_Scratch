@@ -47,8 +47,8 @@ class LSTM(BaseLayer):
         self.cell_states = np.zeros(shape=(self.batch_size, self.hidden_size))
         self.hidden_inputs = np.zeros(shape=(self.batch_size, self.hidden_size))
 
-        self._weights = np.random.uniform(0, 1, size=(self.hidden_size + self.input_size + 1, self.hidden_size * 4))
-        self.weights_output = np.random.uniform(0, 1, size=(self.hidden_size + 1, self.output_size))
+        # self._weights = np.random.uniform(0, 1, size=(self.hidden_size + self.input_size + 1, self.hidden_size * 4))
+        # self.weights_output = np.random.uniform(0, 1, size=(self.hidden_size + 1, self.output_size))
         self._gradient_weights = None
         self.gradient_weights_output = None
 
@@ -82,11 +82,11 @@ class LSTM(BaseLayer):
 
     @property
     def weights(self):
-        return self._weights
+        return self.fc_gates.weights
 
     @weights.setter
     def weights(self, weight):
-        self._weights = weight
+        self.fc_gates.weights = weight
 
     def create_embedded_layers(self):
         self.fc_gates = FullyConnected(self.hidden_size + self.input_size, self.hidden_size * 4)
@@ -101,14 +101,12 @@ class LSTM(BaseLayer):
     def initialize(self, weight_initializer, bias_initializer):
         fan_in = self.hidden_size + self.input_size + 1
         fan_out = self.hidden_size
-        weights = weight_initializer.initialize(self.weights.shape, fan_in, fan_out)
+        weights = weight_initializer.initialize(self.fc_gates.weights.shape, fan_in, fan_out)
         self.fc_gates.weights = weights
-        self.weights = weights
         fan_in = self.hidden_size + 1
         fan_out = self.output_size
-        weights_output = weight_initializer.initialize(self.weights_output.shape, fan_in, fan_out)
+        weights_output = weight_initializer.initialize(self.fc_output.weights.shape, fan_in, fan_out)
         self.fc_output.weights = weights_output
-        self.weights_output = weights_output
 
     def calculate_regularization_loss(self):
         return self.optimizer.regularizer.norm(self.weights)
@@ -213,7 +211,7 @@ class LSTM(BaseLayer):
     def backward(self, error_tensor):
 
         accumulated_weights_gradient = np.zeros_like(self.weights)
-        accumulated_weights_output_gradient = np.zeros_like(self.weights_output)
+        accumulated_weights_output_gradient = np.zeros_like(self.fc_output.weights)
 
         previous_error_tensor = np.zeros_like(self.input_tensor)
         self.current_hidden_error = 0
@@ -320,12 +318,12 @@ class LSTM(BaseLayer):
         # Update weights in FC layers.
         if self.optimizer:
             updated_weight_tensor = self.optimizer.calculate_update(self.fc_gates.weights, accumulated_weights_gradient)
-            self.weights = updated_weight_tensor
+            # self.weights = updated_weight_tensor
             self.fc_gates.weights = updated_weight_tensor
 
         if self.optimizer:
             updated_weight_tensor = self.optimizer.calculate_update(self.fc_output.weights, accumulated_weights_output_gradient)
             self.fc_output.weights = updated_weight_tensor
-            self.weights_output = updated_weight_tensor
+            # self.weights_output = updated_weight_tensor
 
         return previous_error_tensor

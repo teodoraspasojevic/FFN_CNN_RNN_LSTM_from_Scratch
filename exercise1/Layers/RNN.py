@@ -16,8 +16,6 @@ class RNN(BaseLayer):
         self.batch_size = 0
         self.hidden_state = np.zeros(shape=(1, self.hidden_size))
         self._memorize = False
-        self._weights = np.random.uniform(0, 1, size=(self.hidden_size + self.input_size + 1, self.hidden_size))
-        self.weights_output = np.random.uniform(0, 1, size=(self.hidden_size + 1, self.output_size))
         self.fc_hidden = None
         self.fc_output = None
         self.sigmoid = None
@@ -35,25 +33,10 @@ class RNN(BaseLayer):
 
     @property
     def optimizer(self):
-        """
-        Getter for attribute _optimizer.
-
-        Returns:
-            Sgd: Optimizer of the layer.
-        """
         return self._optimizer
 
     @optimizer.setter
     def optimizer(self, optimizer_object):
-        """
-        Setter for attribute _optimizer.
-
-        Args:
-            optimizer(Sgd): New optimizer for the layer.
-
-        Returns:
-            None
-        """
         self._optimizer = optimizer_object
 
     @property
@@ -74,11 +57,11 @@ class RNN(BaseLayer):
 
     @property
     def weights(self):
-        return self._weights
+        return self.fc_hidden.weights
 
     @weights.setter
     def weights(self, weight):
-        self._weights = weight
+        self.fc_hidden.weights = weight
 
     def create_embedded_layers(self):
         self.fc_hidden = FullyConnected(self.hidden_size + self.input_size, self.hidden_size)
@@ -89,15 +72,13 @@ class RNN(BaseLayer):
     def initialize(self, weight_initializer, bias_initializer):
         fan_in = self.hidden_size + self.input_size + 1
         fan_out = self.hidden_size
-        self.weights = weight_initializer.initialize(self.weights.shape, fan_in, fan_out)
-        self.fc_hidden.weights = self.weights
+        self.fc_hidden.weights = weight_initializer.initialize(self.fc_hidden.weights.shape, fan_in, fan_out)
         fan_in = self.hidden_size + 1
         fan_out = self.output_size
-        self.weights_output = weight_initializer.initialize(self.weights_output.shape, fan_in, fan_out)
-        self.fc_output.weights = self.weights_output
+        self.fc_output.weights = weight_initializer.initialize(self.fc_output.weights.shape, fan_in, fan_out)
 
     def calculate_regularization_loss(self):
-        return self.optimizer.regularizer.norm(self.weights)
+        return self.optimizer.regularizer.norm(self.fc_hidden.weights)
 
     def forward(self, input_tensor):
 
@@ -147,8 +128,8 @@ class RNN(BaseLayer):
 
     def backward(self, error_tensor):
 
-        accumulated_weights_gradient = np.zeros_like(self.weights)
-        accumulated_output_gradient = np.zeros_like(self.weights_output)
+        accumulated_weights_gradient = np.zeros_like(self.fc_hidden.weights)
+        accumulated_output_gradient = np.zeros_like(self.fc_output.weights)
 
         previous_error_tensor = np.zeros_like(self.input_tensor)
         self.current_hidden_error = 0
@@ -204,12 +185,10 @@ class RNN(BaseLayer):
         # Update weights in FC layers.
         if self.optimizer:
             updated_weight_tensor = self.optimizer.calculate_update(self.fc_hidden.weights, accumulated_weights_gradient)
-            self.weights = updated_weight_tensor
             self.fc_hidden.weights = updated_weight_tensor
 
         if self.optimizer:
             updated_weight_tensor = self.optimizer.calculate_update(self.fc_output.weights, accumulated_output_gradient)
             self.fc_output.weights = updated_weight_tensor
-            self.weights_output = updated_weight_tensor
 
         return previous_error_tensor
